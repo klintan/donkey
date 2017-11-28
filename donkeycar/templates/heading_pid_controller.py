@@ -20,6 +20,7 @@ import donkeycar as dk
 from donkeycar.parts.camera import PiCamera
 from donkeycar.parts.transform import Lambda
 from donkeycar.parts.keras import KerasCategorical
+from donkeycar.parts.pid import PID
 from donkeycar.parts.actuator import PCA9685, PWMSteering, PWMThrottle
 from donkeycar.parts.datastore import TubHandler, TubGroup
 from donkeycar.parts.controller import LocalWebController, JoystickController
@@ -79,7 +80,7 @@ def drive(cfg, model_path=None, use_joystick=False):
           outputs=['pilot/angle', 'pilot/throttle'],
           run_condition='run_pilot')
     
-    
+
     #Choose what inputs should change the car.
     def drive_mode(mode, 
                    user_angle, user_throttle,
@@ -92,7 +93,14 @@ def drive(cfg, model_path=None, use_joystick=False):
         
         else: 
             return pilot_angle, pilot_throttle
-        
+
+    # P I D values
+    pid = PID(1.2, 1, 0.001)
+
+    V.add(pid,
+          inputs=['pilot/angle', 'imu/angle'],
+          outputs=['pilot/angle'])
+
     drive_mode_part = Lambda(drive_mode)
     V.add(drive_mode_part, 
           inputs=['user/mode', 'user/angle', 'user/throttle',
